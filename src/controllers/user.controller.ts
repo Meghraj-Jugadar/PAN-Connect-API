@@ -1,39 +1,50 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import prisma from '../lib/prisma.js';
-import { CreateUserSchema, LoginSchema } from '../schemas/user.schema.js';
-import type { CreateUserRequest, LoginRequest } from '../types/request.types.js';
+import { CreateUserSchema } from '../schemas/user.schema.js';
+import type { CreateUserRequest } from '../types/request.types.js';
 import { LOGGER } from '../utils/logger.js';
+import { UserRepository } from '../repositories/user.repository.js';
+import { ErrorHandler } from '../utils/error-handler.js';
 
 export const createUserHandler = async (request: FastifyRequest<CreateUserRequest>, reply: FastifyReply) => {
   try {
-    LOGGER.info(`Creating user with data: ${JSON.stringify(request.body)}`);
     const { email, password, name } = CreateUserSchema.parse(request.body);
     
-    // Connect to database
-    await prisma.$connect();
-    
     const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await UserRepository.createUser(email, hashedPassword, name ?? null);
+    const token = jwt.sign({ userId: result.data.id }, process.env.JWT_SECRET!);
     
-    const user = await prisma.pANUser.create({
-      data: { email, password: hashedPassword, name: name ?? null }
-    });
-
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!);
-    
-    // Disconnect from database
-    await prisma.$disconnect();
-    
-    reply.send({ user: { id: user.id, email: user.email, name: user.name }, token });
+    reply.send({ ...result, token });
     LOGGER.info(`User created successfully`);
   } catch (error: any) {
-    await prisma.$disconnect(); // Ensure disconnect on error
-    
-    if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
-      return reply.status(409).send({ error: 'Email already exists. Please try to login.' });
+    if (!ErrorHandler.handlePrismaError(error, reply, 'createUser')) {
+      ErrorHandler.handleGenericError(error, reply, 'createUser', 400);
     }
-    LOGGER.error(`Error creating user: ${error.message}`);
-    reply.status(400).send({ error: 'User creation failed' });
+  }
+};
+
+export const fetchAllUsersHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    LOGGER.info(`Fetching all users`);
+    const result = await UserRepository.findAllUsers();
+    reply.send(result);
+    LOGGER.info(`Users fetched successfully : ${result.total}`);
+  } catch (error: any) {
+    ErrorHandler.handleGenericError(error, reply, 'fetchUsers');
+  }
+};
+
+export const deleteUserByIDHandler = async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  try {
+    const { id } = request.params;
+    LOGGER.info(`Deleting user with id: ${id}`);
+    const result = await UserRepository.deleteUserByID(Number(id));
+    reply.send(result);
+    LOGGER.info(`User deleted successfully`);
+  } catch (error: any) {
+    if (!ErrorHandler.handlePrismaError(error, reply, 'deleteUser')) {
+      ErrorHandler.handleGenericError(error, reply, 'deleteUser');
+    }
   }
 };
