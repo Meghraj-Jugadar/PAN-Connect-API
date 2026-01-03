@@ -7,13 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// model: PANUser
 model PANUser {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String   // Added password field
-  name      String?
-  isDeleted Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt // Good practice to track updates
+  id                    Int      @id @default(autoincrement())
+  email                 String   @unique
+  password              String
+  name                  String?
+  role                  String
+  isDeleted             Boolean  @default(false)
+  resetToken            String?
+  resetTokenExpiry      DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
