@@ -1,11 +1,12 @@
+// src/controllers/user.controller.ts
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { CreateUserSchema } from '../schemas/user.schema.js';
 import type { CreateUserRequest } from '../types/request.types.js';
 import { LOGGER } from '../utils/logger.js';
 import { UserRepository } from '../repositories/user.repository.js';
 import { ErrorHandler } from '../utils/error-handler.js';
+import { JWTService } from '../services/jwt.service.js';
 
 export const createUserHandler = async (request: FastifyRequest<CreateUserRequest>, reply: FastifyReply) => {
   try {
@@ -13,7 +14,7 @@ export const createUserHandler = async (request: FastifyRequest<CreateUserReques
     
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await UserRepository.createUser(email, hashedPassword, name ?? null);
-    const token = jwt.sign({ userId: result.data.id }, process.env.JWT_SECRET!);
+    const token = JWTService.generateToken(result.data.id, result.data.role);
     
     reply.send({ ...result, token });
     LOGGER.info(`User created successfully`);
