@@ -4,17 +4,31 @@ import { LOGGER } from '../utils/logger.js';
 export class EmailService {
   private static transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false,
+    port: parseInt(process.env.SMTP_PORT!),
+    secure: false, // true for 465, false for other ports
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS
+    },
+    tls: {
+      ciphers: 'SSLv3'
     }
   });
 
+  // Add to EmailService for testing
+  static async testConnection(): Promise<void> {
+    try {
+      await this.transporter.verify();
+      LOGGER.info('SMTP connection verified successfully');
+    } catch (error) {
+      LOGGER.error('SMTP connection failed:', error);
+    }
+  }
+
+
   static async sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-    
+
     const mailOptions = {
       from: process.env.FROM_EMAIL,
       to: email,
