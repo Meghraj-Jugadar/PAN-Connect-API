@@ -117,7 +117,6 @@ export class UserRepository {
         }
     }
 
-
     static async findAllUsers(): Promise<{ success: boolean; message: string; data: PublicUser[]; total: number }> {
         await prisma.$connect();
         try {
@@ -130,7 +129,8 @@ export class UserRepository {
                         email: true,
                         name: true,
                         role: true,
-                        createdAt: true
+                        createdAt: true,
+                        updatedAt: true
                     }
                 }),
                 prisma.pANUser.count({
