@@ -5,11 +5,11 @@ services:
     container_name: panconnect_postgres_stage
     restart: always
     environment:
-      POSTGRES_USER: Meghraj
+      POSTGRES_USER: meghraj
       POSTGRES_PASSWORD: Monya848
       POSTGRES_DB: panconnect_stage
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
